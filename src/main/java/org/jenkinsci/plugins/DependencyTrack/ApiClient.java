@@ -19,7 +19,9 @@ import hudson.FilePath;
 import hudson.remoting.Base64;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
@@ -33,7 +35,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.UUID;
 
 public class ApiClient {
@@ -43,6 +47,7 @@ public class ApiClient {
     private static final String BOM_TOKEN_URL = "/api/v1/bom/token";
     private static final String BOM_UPLOAD_URL = "/api/v1/bom";
     private static final String SCAN_UPLOAD_URL = "/api/v1/scan";
+    private static final String GET_PROJECT_URL = "/api/v1/project";
 
     private final String baseUrl;
     private final String apiKey;
@@ -75,7 +80,7 @@ public class ApiClient {
     }
 
     public UploadResult upload(String projectId, String projectName, String projectVersion, FilePath artifact,
-                          boolean isScanResult, boolean autoCreateProject) throws IOException {
+                               boolean isScanResult, boolean autoCreateProject) throws IOException, ApiClientException {
         final String encodedScan;
         try {
             encodedScan = Base64.encode(artifact.readToString().getBytes(StandardCharsets.UTF_8));
@@ -113,15 +118,14 @@ public class ApiClient {
         }
         // Checks the server response
         if (conn.getResponseCode() == 200) {
-            if (projectId != null) {
-                logger.log(Messages.Builder_Success() + " - " + projectId);
-            } else {
-                logger.log(Messages.Builder_Success());
+            if (projectId == null) {
+                projectId = getProjectId(projectName, projectVersion);
             }
+            logger.log(Messages.Builder_Success() + " - " + projectId);
             final String responseBody = getResponseBody(conn.getInputStream());
             if (StringUtils.isNotBlank(responseBody)) {
                 final JSONObject json = JSONObject.fromObject(responseBody);
-                return new UploadResult(true, UUID.fromString(json.getString("token")));
+                return new UploadResult(true, projectId, UUID.fromString(json.getString("token")));
             } else {
                 return new UploadResult(true);
             }
@@ -163,11 +167,44 @@ public class ApiClient {
         }
     }
 
+
+    private String getProjectId(String projectName, String projectVersion) throws ApiClientException {
+        try {
+            final HttpURLConnection conn = (HttpURLConnection) new URL(baseUrl + GET_PROJECT_URL + "?name=" + URLEncoder.encode(projectName, "UTF-8"))
+                    .openConnection();
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty(API_KEY_HEADER, apiKey);
+            conn.connect();
+            if (conn.getResponseCode() == 200) {
+                try (JsonReader jsonReader = Json.createReader(new BufferedInputStream(conn.getInputStream()))) {
+                    final JsonArray jsonArray = jsonReader.readArray();
+                    for (JsonValue jsonValue : jsonArray) {
+                        final JsonObject jsonObject = (JsonObject) jsonValue;
+                        final String version = jsonObject.containsKey("version")
+                                               ? jsonObject.getString("version")
+                                               : null;
+                        if (Objects.equals(projectVersion, version)) {
+                            return jsonObject.getString("uuid");
+                        }
+                    }
+                    throw new ApiClientException("Cannot get project id of just created project name '" + projectName + "' and version '" + projectVersion + "'");
+                }
+            } else {
+                logger.log("An acceptable response was not returned: " + conn.getResponseCode());
+                throw new ApiClientException("An acceptable response was not returned: " + conn.getResponseCode());
+            }
+        } catch (IOException e) {
+            throw new ApiClientException("An error occurred while checking if a token is being processed", e);
+        }
+    }
+
     private String getResponseBody(InputStream in) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         StringBuilder result = new StringBuilder();
         String line;
-        while((line = reader.readLine()) != null) {
+        while ((line = reader.readLine()) != null) {
             result.append(line);
         }
         return result.toString();
@@ -176,18 +213,27 @@ public class ApiClient {
     public static class UploadResult {
         private boolean success;
         private UUID token;
+        private String projectId;
 
         UploadResult(boolean success) {
             this.success = success;
             this.token = null;
         }
-        UploadResult(boolean success, UUID token) {
+
+        UploadResult(boolean success, String projectId, UUID token) {
             this.success = success;
+            this.projectId = projectId;
             this.token = token;
         }
+
         public boolean isSuccess() {
             return success;
         }
+
+        public String getProjectId() {
+            return projectId;
+        }
+
         public UUID getToken() {
             return token;
         }
