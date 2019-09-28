@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
 
     <f:section title="Dependency-Track">
         <f:entry title="${%dependencytrack.url}" field="dependencyTrackUrl" help="/plugin/dependency-track/help-dt-url.html">
-            <f:textbox id="dependencytrack.url"/>
+            <f:textbox />
         </f:entry>
         <f:entry title="${%dependencytrack.apikey}" field="dependencyTrackApiKey" help="/plugin/dependency-track/help-dt-apikey.html">
-            <f:textbox id="dependencytrack.apikey"/>
+            <f:textbox />
         </f:entry>
         <f:entry title="${%dependencytrack.polling.timeout}" field="dependencyTrackPollingTimeout" help="/plugin/dependency-track/help-dt-polling-timeout.html">
-            <f:number id="dependencytrack.polling.timeout"/>
+            <f:number />
         </f:entry>
         <f:entry title="${%dependencytrack.autocreate}" field="dependencyTrackAutoCreateProjects" help="/plugin/dependency-track/help-dt-autocreate.html">
             <f:checkbox id="dependencytrack.autocreate" default="false"/>

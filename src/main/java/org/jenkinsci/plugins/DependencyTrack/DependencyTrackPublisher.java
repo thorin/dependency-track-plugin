@@ -39,6 +39,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
 import javax.annotation.Nonnull;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -342,11 +343,13 @@ public class DependencyTrackPublisher extends ThresholdCapablePublisher implemen
 
                     // Checks the server response
                     if (conn.getResponseCode() == 200) {
-                        try (InputStream in = new BufferedInputStream(conn.getInputStream())) {
-                            JsonReader jsonReader = Json.createReader(in);
+                        try (
+                            InputStream in = new BufferedInputStream(conn.getInputStream());
+                            JsonReader jsonReader = Json.createReader(in)
+                        ) {
                             JsonArray array = jsonReader.readArray();
                             // Add an empty option at the beginning of the list
-                            if (projects.size() == 0) {
+                            if (projects.isEmpty()) {
                                 projects.add("-- Select Project --", null);
                             }
                             if (!array.isEmpty()) {
@@ -427,10 +430,7 @@ public class DependencyTrackPublisher extends ThresholdCapablePublisher implemen
          */
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            dependencyTrackUrl = formData.getString("dependencyTrackUrl");
-            dependencyTrackApiKey = formData.getString("dependencyTrackApiKey");
-            dependencyTrackAutoCreateProjects = formData.getBoolean("dependencyTrackAutoCreateProjects");
-            dependencyTrackPollingTimeout = formData.getInt("dependencyTrackPollingTimeout");
+            req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
         }
@@ -444,10 +444,28 @@ public class DependencyTrackPublisher extends ThresholdCapablePublisher implemen
         }
 
         /**
+         * This method sets the global configuration for dependencyTrackUrl.
+         * @param dependencyTrackUrl the base URL to Dependency-Track
+         */
+        @DataBoundSetter
+        public void setDependencyTrackUrl(String dependencyTrackUrl) {
+            this.dependencyTrackUrl = dependencyTrackUrl;
+        }
+
+        /**
          * This method returns the global configuration for dependencyTrackUrl.
          */
         public String getDependencyTrackUrl() {
             return PluginUtil.parseBaseUrl(dependencyTrackUrl);
+        }
+
+        /**
+         * This method sets the global configuration for dependencyTrackApiKey.
+         * @param dependencyTrackApiKey the API key to use for authentication
+         */
+        @DataBoundSetter
+        public void setDependencyTrackApiKey(String dependencyTrackApiKey) {
+            this.dependencyTrackApiKey = dependencyTrackApiKey;
         }
 
         /**
@@ -458,11 +476,29 @@ public class DependencyTrackPublisher extends ThresholdCapablePublisher implemen
         }
 
         /**
+         * This method returns the global configuration for dependencyTrackAutoCreateProjects
+         * @param dependencyTrackAutoCreateProjects the auto create projects flag
+         */
+        @DataBoundSetter
+        public void setDependencyTrackAutoCreateProjects(boolean dependencyTrackAutoCreateProjects) {
+            this.dependencyTrackAutoCreateProjects = dependencyTrackAutoCreateProjects;
+        }
+
+        /**
          * This method returns the global configuration for
          * dependencyTrackAutoCreateProjects.
          */
         public boolean isDependencyTrackAutoCreateProjects() {
             return dependencyTrackAutoCreateProjects;
+        }
+
+        /**
+         * This method sets the global configuration for dependencyTrackPollingTimeout.
+         * @param dependencyTrackPollingTimeout the maximum number of minutes to wait for synchronous jobs to complete.
+         */
+        @DataBoundSetter
+        public void setDependencyTrackPollingTimeout(int dependencyTrackPollingTimeout) {
+            this.dependencyTrackPollingTimeout = dependencyTrackPollingTimeout;
         }
 
         /**

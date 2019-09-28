@@ -1,0 +1,7 @@
+---
+unclassified:
+  dependencyTrackPublisher:
+    dependencyTrackUrl: http://dependency-track.example.org
+    dependencyTrackApiKey: oothai8ooWoopishaikee9Ar
+    dependencyTrackAutoCreateProjects: yes
+    dependencyTrackPollingTimeout: 120

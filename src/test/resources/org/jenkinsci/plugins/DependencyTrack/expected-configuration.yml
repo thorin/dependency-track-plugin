@@ -1,0 +1,4 @@
+dependencyTrackApiKey: "oothai8ooWoopishaikee9Ar"
+dependencyTrackAutoCreateProjects: true
+dependencyTrackPollingTimeout: 120
+dependencyTrackUrl: "http://dependency-track.example.org"
